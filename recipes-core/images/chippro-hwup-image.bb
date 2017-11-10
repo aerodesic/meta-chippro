@@ -1,7 +1,7 @@
 # Base this image on core-image-minimal
 include recipes-core/images/core-image-minimal.bb
 
-DEPENDS="android-tools-native"
+DEPENDS+="android-tools-native"
 
 NAND_ERASE_BLOCK_SIZE = "262144"
 

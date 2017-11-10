@@ -10,8 +10,6 @@ SRC_URI = "file://uboot.script"
 
 SCRIPTADDR            = "0x43100000"
 
-SPL_UBOOT_BINARY      = "u-boot-sunxi-with-spl.bin"
-
 UBI_SIZE              = "0x0A000000"
 LED_I2C_CHIP          = "0x34"
 LED_I2C_ADDR          = "0x93"
@@ -89,7 +87,7 @@ do_deploy() {
 	    FLASH_UBOOT=true
 
 	    # boot the fastboot program loader
-	    sunxi-fel uboot \${DEP_DIR_IMAGE}/${SPL_UBOOT_BINARY} write ${SCRIPTADDR} \${DEP_DIR_IMAGE}/boot.scr
+	    sunxi-fel uboot \${DEP_DIR_IMAGE}/${SPL_BINARY} write ${SCRIPTADDR} \${DEP_DIR_IMAGE}/boot.scr
 	    sleep 8
 	fi
 
