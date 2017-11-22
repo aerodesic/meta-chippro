@@ -2,11 +2,7 @@
 # Base this image on core-image-minimal
 include recipes-core/images/core-image-minimal.bb
 
-<<<<<<< HEAD
-=======
 DEPENDS+="android-tools-native"
-
-# NAND_ERASE_BLOCK_SIZE = "262144"
 
 
 do_post_process_images() {
@@ -19,5 +15,3 @@ do_post_process_images() {
 }
 
 do_image_ubi[postfuncs] += "do_post_process_images"
-
->>>>>>> 210ffad031f8ccd2538e1e6c47ca70f092587d1e
