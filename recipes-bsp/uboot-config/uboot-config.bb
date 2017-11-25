@@ -4,7 +4,12 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/COPYING.MIT;md5=3da9cfbcb788c80a0384
 
 inherit deploy
 
+UBOOT_SCRIPTADDR ?= "0x43100000"
+
 DEPENDS = "u-boot-mkimage-native"
+
+# Flass device vendor ID required for fastboot
+VID = "-i 0x1f3a"
 
 SRC_URI = " \
 	file://uboot.script \
@@ -27,6 +32,17 @@ do_compile() {
     # Create uboot-env file
     mkenvimage -s ${ENV_IMAGE_SIZE} -o ${DEPLOYDIR}/uboot-env.bin ${WORKDIR}/uboot-env
 }
+
+# Removed from below
+#	else
+#	    CURRENT_UBI_SIZE=\$(stat --dereference --printf="%s" \${UBI_IMAGE})
+#	    MAX_SIZE=\$(printf %d ${MAX_UBI_SIZE})
+#	    if [ \${CURRENT_UBI_SIZE} -gt \${MAX_SIZE} ]; then
+#	        echo "Error: UBI_IMAGE file \"\${UBI_IMAGE}\" is too large."
+#	        echo "Current file size is \${CURRENT_UBI_SIZE}"
+#	        echo "Max file size is \${MAX_SIZE}"
+#	        exit -1
+#	    fi
 
 do_deploy() {
     # Create the flashing script
@@ -51,15 +67,6 @@ do_deploy() {
 	elif [ ! -e "\${UBI_IMAGE}" ]; then
 	    echo "Error: UBI_IMAGE file \"\${UBI_IMAGE}\" does not exist."
 	    exit -1
-	else
-	    CURRENT_UBI_SIZE=\$(stat --dereference --printf="%s" \${UBI_IMAGE})
-	    MAX_SIZE=\$(printf %d ${MAX_UBI_SIZE})
-	    if [ \${CURRENT_UBI_SIZE} -gt \${MAX_SIZE} ]; then
-	        echo "Error: UBI_IMAGE file \"\${UBI_IMAGE}\" is too large."
-	        echo "Current file size is \${CURRENT_UBI_SIZE}"
-	        echo "Max file size is \${MAX_SIZE}"
-	        exit -1
-	    fi
 	fi
 
 	if [ "\${1}" == "--bootloader" ]; then
@@ -67,7 +74,7 @@ do_deploy() {
 	    FLASH_UBOOT=true
 
 	    # boot the fastboot program loader
-	    sunxi-fel uboot ${SPL_BINARY} write ${SCRIPTADDR} boot.scr
+	    sunxi-fel uboot ${SPL_BINARY} write ${UBOOT_SCRIPTADDR} boot.scr
 	    sleep 8
 	fi
 

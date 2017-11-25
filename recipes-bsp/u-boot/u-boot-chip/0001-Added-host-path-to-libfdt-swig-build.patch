@@ -1,26 +1,24 @@
-From d074a7df95f43fd4e38a62520d10b7a71e9b1547 Mon Sep 17 00:00:00 2001
-From: Gary Oliver <go@aerodesic.com>
-Date: Thu, 9 Nov 2017 07:22:54 -0800
+From 7c4141e2184b368db91c6ff7a1b10f72ea588c49 Mon Sep 17 00:00:00 2001
+From: Gary Oliver <go@ao-cs.com>
+Date: Wed, 22 Nov 2017 15:51:47 -0800
 Subject: [PATCH] Added host path to libfdt swig build
 
 ---
- tools/Makefile | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
+ scripts/dtc/pylibfdt/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
 
-diff --git a/tools/Makefile b/tools/Makefile
-index 5db2a54..3453c33 100644
---- a/tools/Makefile
-+++ b/tools/Makefile
-@@ -137,7 +137,8 @@ tools/_libfdt.so: $(LIBFDT_SRCS) $(LIBFDT_SWIG)
- 		CPPFLAGS="$(_hostc_flags)" OBJDIR=tools \
- 		SOURCES="$(LIBFDT_SRCS) tools/libfdt.i" \
- 		SWIG_OPTS="-I$(srctree)/lib/libfdt -I$(srctree)/lib" \
--		$(PYTHON) $(libfdt_tree)/pylibfdt/setup.py --quiet build_ext \
+diff --git a/scripts/dtc/pylibfdt/Makefile b/scripts/dtc/pylibfdt/Makefile
+index 01d5e0f..9c8e94c 100644
+--- a/scripts/dtc/pylibfdt/Makefile
++++ b/scripts/dtc/pylibfdt/Makefile
+@@ -20,6 +20,7 @@ quiet_cmd_pymod = PYMOD   $@
+ 		CPPFLAGS="$(HOSTCFLAGS) -I$(LIBFDT_srcdir)" OBJDIR=$(obj) \
+ 		SOURCES="$(PYLIBFDT_srcs)" \
+ 		SWIG_OPTS="-I$(LIBFDT_srcdir) -I$(LIBFDT_srcdir)/.." \
 +		PATH="$(PATH):/usr/bin" \
-+		$(PYTHON) -v $(libfdt_tree)/pylibfdt/setup.py --quiet build_ext \
- 			--build-lib tools
+ 		$(PYTHON) $< --quiet build_ext --inplace
  
- ifneq ($(CONFIG_MX23)$(CONFIG_MX28),)
+ $(obj)/_libfdt.so: $(src)/setup.py $(PYLIBFDT_srcs) FORCE
 -- 
 2.7.4
 

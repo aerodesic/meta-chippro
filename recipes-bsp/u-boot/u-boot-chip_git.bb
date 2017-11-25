@@ -13,11 +13,11 @@ RDEPENDS_${PN}_append_chippro = " uboot-config"
 
 PV = "git${SRCPV}"
 
-SRCREV ?= "57270eca55b4e72b4af6c78ac066466dba7c6d70"
-SRC_URI = " \
-	git://github.com/u-boot/u-boot.git \
-        file://0001-Added-host-path-to-libfdt-swig-build.patch \
-        "
+# SRCREV ?= "57270eca55b4e72b4af6c78ac066466dba7c6d70"
+SRCREV ?= "16fa2eb95172e63820ee5f3d4052f3362a6de84e"
+SRC_URI = "git://github.com/u-boot/u-boot.git \
+           file://0001-Added-host-path-to-libfdt-swig-build.patch \
+           "
 
 S = "${WORKDIR}/git"
 
