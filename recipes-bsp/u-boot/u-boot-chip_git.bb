@@ -2,24 +2,28 @@ require recipes-bsp/u-boot/u-boot.inc
 
 DESCRIPTION = "U-Boot port for C.H.I.P. boards"
 LICENSE = "GPLv2+"
-LIC_FILES_CHKSUM = "file://Licenses/README;md5=a2c678cfd4a4d97135585cad908541c6"
+LIC_FILES_CHKSUM = "file://Licenses/README;md5=0507cd7da8e7ad6d6701926ec9b84c95"
 
 DEPENDS += "dtc-native swig-native python-native coreutils-native"
 
 PROVIDES += "u-boot"
 RDEPENDS_${PN}_append_chippro = " uboot-config"
 
-# EXTRA_OEMAKE+="KBUILD_VERBOSE='1' CFLAGS='${CFLAGS} -v'"
+BRANCH = "ww/2016.01/next"
+UBOOT_VERSION = "ww-2016.01-next"
+PV = "${UBOOT_VERSION}-git${SRCPV}"
 
-PV = "git${SRCPV}"
-
-# SRCREV ?= "57270eca55b4e72b4af6c78ac066466dba7c6d70"
-SRCREV ?= "16fa2eb95172e63820ee5f3d4052f3362a6de84e"
-SRC_URI = "git://github.com/u-boot/u-boot.git \
-           file://0001-Added-host-path-to-libfdt-swig-build.patch \
-           "
+SRCREV="2fa5547d620ef2885f680986891c3feb425dbfe6"
+SRC_URI = " \
+	git://github.com/NextThingCo/CHIP-u-boot.git;branch=${BRANCH} \
+	file://CHIP_pro_defconfig \
+        "
 
 S = "${WORKDIR}/git"
+
+do_compile_prepend() {
+    cp ${WORKDIR}/CHIP_pro_defconfig ${S}/configs/
+}
 
 do_compile_append() {
     install ${B}/spl/${SPL_ECC_BINARY} ${B}/${SPL_ECC_BINARY}
