@@ -27,6 +27,10 @@ do_compile_prepend() {
 
 do_compile_append() {
     install ${B}/spl/${SPL_ECC_BINARY} ${B}/${SPL_ECC_BINARY}
+    # Move the file if necessary
+    if [ -e ${B}/spl/${SPL_BINARY} ] ; then
+      install ${B}/spl/${SPL_BINARY} ${B}/${SPL_BINARY}
+    fi
 }
 
 COMPATIBLE_MACHINE = "chippro"
