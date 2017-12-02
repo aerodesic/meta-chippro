@@ -1,0 +1,177 @@
+From a3ea16221ead3f55450e3353f5ad9ea4ea832741 Mon Sep 17 00:00:00 2001
+From: Gary Oliver <go@ao-cs.com>
+Date: Fri, 1 Dec 2017 15:42:02 -0800
+Subject: [PATCH] Add booting from UBI volume zImages
+
+---
+ common/Kconfig                  | 44 ++++++++++++++++++++++++++++++
+ include/config_distro_bootcmd.h | 59 +++++++++++++++++++++++++++++++++++++++++
+ scripts/config_whitelist.txt    |  6 +++++
+ 3 files changed, 109 insertions(+)
+
+diff --git a/common/Kconfig b/common/Kconfig
+index c50d6eb..e0af5b7 100644
+--- a/common/Kconfig
++++ b/common/Kconfig
+@@ -200,6 +200,50 @@ config BOOTARGS
+ 	  CONFIG_BOOTARGS goes into the environment value "bootargs". Note that
+ 	  this value will also override the "chosen" node in FDT blob.
+ 
++config USE_UBI_BOOT_ZIMAGE
++	bool "Enable booting from zImage in one or more UBI volumes
++	depends on CMD_UBI
++	help
++	  Installs scripts to enable booting a zImage from one or more
++	  UBI instances.
++
++config UBI_BOOT_PART
++	string "UBI partition to search for zImages"
++	depends on USE_UBI_BOOT_ZIMAGE
++	default UBI
++	help
++	  This is the name of the ubi partition to search.
++
++config UBI_BOOT_FSVOL
++	string "Volume name for UBI zImage boot"
++	depends on USE_UBI_BOOT_ZIMAGE
++	default rootfs
++	help
++	  This is the base name of the file system containing the zImage
++
++config UBI_BOOT_FDTVOL
++	string "Volume name for UBI fdt image base name"
++	depends on USE_UBI_BOOT_ZIMAGE
++	default fdt
++	help
++	  This is the base name of the file system containing the fdt.
++
++config UBI_BOOT_IMAGE_SUFFIXES
++	string "A list of suffixes to apply to the volume names"
++	depends on USE_UBI_BOOT_ZIMAGE
++	help
++	  This is a list of suffixes to be applied to the FSVOL and
++	  FDTVOL names by appending a '_' and the suffix to attempt
++	  a boot from that volume.  If this field is blank, only
++	  the base name(s) will be used without a suffix to effect
++	  a boot attempt from a single root file  system.
++
++config UBI_BOOT_RO
++	bool "Selects a read-only filesystem"
++	depends on USE_UBI_BOOT_ZIMAGE
++	help
++	  If selected, the file system will be mounted read-only.
++
+ config USE_BOOTCOMMAND
+ 	bool "Enable a default value for bootcmd"
+ 	help
+diff --git a/include/config_distro_bootcmd.h b/include/config_distro_bootcmd.h
+index e0d0034..31109ea 100644
+--- a/include/config_distro_bootcmd.h
++++ b/include/config_distro_bootcmd.h
+@@ -68,6 +68,71 @@
+ 	BOOT_TARGET_DEVICES_references_MMC_without_CONFIG_CMD_MMC
+ #endif
+ 
++/*
++ * A boot command for loading a zImage from a UBI volume.  Allows
++ * specifying one or more image areas for searching for a good
++ * loadable image.
++ *
++ * Controlled by these CONFIG variables:
++ *   CONFIG_USE_UBI_BOOT_ZIMAGE      enables this boot method (default=N)
++ *   CONFIG_UBI_BOOT_PART            name of UBI partition (defaults to 'UBI')
++ *   CONFIG_UBI_BOOT_FSVOL           name of rootfs base volume (default to 'rootfs')
++ *   CONFIG_UBI_BOOT_FDTVOL          name of fdt base volume (default to 'fdt')
++ *   CONFIG_UBI_BOOT_IMAGE_SUFFIXES  name(s) of image suffixes (default to '')
++ *   CONFIG_UBI_BOOT_RO              if true, mounts fs read only
++ */
++#ifdef CONFIG_USE_UBI_BOOT_ZIMAGE
++#if CONFIG_UBI_ROOT_RO
++#define UBI_ROOT_RO_STRING "ro"
++#else
++#define UBI_ROOT_RO_STRING "rw"
++#endif
++
++#define BOOTENV_SHARED_ZIMAGE \
++	"boot_fel="								\
++	  "if test -n ${fel_booted} && test -n ${fel_scriptaddr}; then "	\
++	    "echo '(FEL boot)';"						\
++	    "source ${fel_scriptaddr};"						\
++	  "fi"									\
++	  "\0"									\
++										\
++	"boot_one_zimage="							\
++	  "echo Test for ubi${devnum}:${fsvol};"				\
++	  "if ubifsmount ubi${devnum}:${fsvol} && "				\
++	    "ubifsload ${kernel_addr_r} boot/zImage && "			\
++	    "ubi read ${fdt_addr_r} ${fdtvol}; then "				\
++	      "setenv bootargs \"${bootargs} root=ubi${devnum}:${fsvol} " 	\
++		      UBI_ROOT_RO_STRING " "					\
++		      "ubi.mtd=" CONFIG_UBI_BOOT_PART "\";"			\
++	    "echo Booting ubi${devnum}:${fsvol}/boot/zImage;"			\
++	    "bootz ${kernel_address_r} - ${fdt_addr_r};"			\
++	  "fi"									\
++	  "\0"									\
++										\
++	"boot_from_zimage=" 							\
++	  "ubi part " CONFIG_UBI_BOOT_PART ";"					\
++	  "if test -z \"" CONFIG_UBI_BOOT_IMAGE_SUFFIXES "\"; then "		\
++	    "setenv fsvol \"" CONFIG_UBI_BOOT_FSVOL "\";"			\
++	    "setenv fdtvol \"" CONFIG_UBI_BOOT_FDTVOL "\";"			\
++	    "run boot_one_zimage;"						\
++	  "else "								\
++	    "for suffix in " CONFIG_UBI_BOOT_IMAGE_SUFFIXES "; do "		\
++	      "setenv fsvol \"" CONFIG_UBI_BOOT_FSVOL "_${suffix}\";"		\
++	      "setenv fdtvol \"" CONFIG_UBI_BOOT_FDTVOL "_${suffix}\";"		\
++	      "run boot_one_zimage;"						\
++           "done;"								\
++	  "fi"									\
++	"\0"									\
++										\
++	"boot_zimage="								\
++	  "run boot_fel;"							\
++	  "run boot_from_zimage"						\
++	"\0"
++
++#else
++#define BOOTENV_SHARED_ZIMAGE
++#endif
++
+ #ifdef CONFIG_CMD_UBIFS
+ #define BOOTENV_SHARED_UBIFS \
+ 	"ubifs_boot=" \
+@@ -326,6 +384,7 @@
+ 	BOOTENV_SHARED_SCSI \
+ 	BOOTENV_SHARED_IDE \
+ 	BOOTENV_SHARED_UBIFS \
++	BOOTENV_SHARED_ZIMAGE \
+ 	BOOTENV_SHARED_EFI \
+ 	"boot_prefixes=/ /boot/\0" \
+ 	"boot_scripts=boot.scr.uimg boot.scr\0" \
+diff --git a/scripts/config_whitelist.txt b/scripts/config_whitelist.txt
+index 8a0c95b..cf83a0f 100644
+--- a/scripts/config_whitelist.txt
++++ b/scripts/config_whitelist.txt
+@@ -4858,6 +4858,11 @@ CONFIG_UART_OR_PRELIM
+ CONFIG_UBIBLOCK
+ CONFIG_UBIFS_SILENCE_MSG
+ CONFIG_UBIFS_VOLUME
++CONFIG_UBI_BOOT_PART
++CONFIG_UBI_BOOT_FSVOL
++CONFIG_UBI_BOOT_FDTVOL
++CONFIG_UBI_BOOT_IMAGES
++CONFIG_UBI_BOOT_RO
+ CONFIG_UBI_PART
+ CONFIG_UBI_SILENCE_MSG
+ CONFIG_UBI_SIZE
+@@ -5012,6 +5017,7 @@ CONFIG_USE_NOR
+ CONFIG_USE_ONENAND_BOARD_INIT
+ CONFIG_USE_SPIFLASH
+ CONFIG_USE_STDINT
++CONFIG_USE_UBI_BOOT_ZIMAGE
+ CONFIG_UTBIPAR_INIT_TBIPA
+ CONFIG_U_BOOT_HDR_ADDR
+ CONFIG_U_BOOT_HDR_SIZE
+-- 
+2.7.4
+

@@ -8,4 +8,4 @@ setenv bootcmd 'run boot_ubi'
 setenv read_fdt 'ubi read ${fdt_addr_r} fdt_a'
 setenv read_kernel 'ubi read ${kernel_addr_r} kernel_a'
 ubi part UBI
-boot
+# boot

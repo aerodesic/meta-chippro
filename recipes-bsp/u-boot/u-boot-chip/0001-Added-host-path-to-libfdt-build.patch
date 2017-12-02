@@ -1,0 +1,24 @@
+From 2f0f86cde99640872d8a371a4e73a908becb1682 Mon Sep 17 00:00:00 2001
+From: Gary Oliver <go@ao-cs.com>
+Date: Tue, 28 Nov 2017 14:08:14 -0800
+Subject: [PATCH] Added host path to libfdt build
+
+---
+ scripts/dtc/pylibfdt/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/scripts/dtc/pylibfdt/Makefile b/scripts/dtc/pylibfdt/Makefile
+index 01d5e0f..9c8e94c 100644
+--- a/scripts/dtc/pylibfdt/Makefile
++++ b/scripts/dtc/pylibfdt/Makefile
+@@ -20,6 +20,7 @@ quiet_cmd_pymod = PYMOD   $@
+ 		CPPFLAGS="$(HOSTCFLAGS) -I$(LIBFDT_srcdir)" OBJDIR=$(obj) \
+ 		SOURCES="$(PYLIBFDT_srcs)" \
+ 		SWIG_OPTS="-I$(LIBFDT_srcdir) -I$(LIBFDT_srcdir)/.." \
++		PATH="$(PATH):/usr/bin" \
+ 		$(PYTHON) $< --quiet build_ext --inplace
+ 
+ $(obj)/_libfdt.so: $(src)/setup.py $(PYLIBFDT_srcs) FORCE
+-- 
+2.7.4
+
