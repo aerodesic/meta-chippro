@@ -14,12 +14,16 @@ RDEPENDS_${PN}_append_chippro = " image-flasher"
 
 PV = "git${SRCPV}"
 
-SRCREV ?= "65972a0b6204aa298b70b7ebd755bb1ce1ed53ee"
+# SRCREV ?= "0c4d24823ed28c94dae56a10a66687c69b70c1d1"
+# Same version as u-boot-mkimage-native
+SRCREV = "0c4d24823ed28c94dae56a10a66687c69b70c1d1"
+
 SRC_URI = "git://github.com/u-boot/u-boot.git \
            file://CHIP_pro_defconfig \
            file://uboot.script \
            file://0001-Added-host-path-to-libfdt-build.patch \
            file://0002-Add-booting-from-UBI-volume-zImages.patch \
+           file://0003-Change-mutex_is_locked-to-return-TRUE-rather-than-FA.patch \
            "
 
 
@@ -36,8 +40,23 @@ do_compile_prepend() {
 
 do_compile_append() {
     # Create padded version of u-boot-dtb.bin
-    # dd if=${B}/u-boot.bin of=${B}/u-boot-sunxi-padded.bin bs=${NAND_ERASE_BLOCK_SIZE} conv=sync
-    ${OBJCOPY} -I binary -O binary --pad-to=0xc0000 --gap-fill=0 ${B}/u-boot-dtb.bin ${B}/${UBOOT_BINARY}
+    ${OBJCOPY} 			\
+	--pad-to=0xc0000	\
+	--gap-fill=0xFF		\
+	-j .text		\
+	-j .secure_text		\
+	-j .rodata		\
+	-j .hash		\
+	-j .data		\
+	-j .got			\
+	-j .got.plt		\
+	-j .u_boot_list		\
+	-j .rel_dyn		\
+	--gap-fill=0xFF		\
+	-I binary		\
+	-O binary		\
+	${B}/u-boot-dtb.bin	\
+	${B}/${UBOOT_BINARY}
 
     install ${B}/spl/${SPL_ECC_BINARY} ${B}/${SPL_ECC_BINARY}
     # Move the file if necessary
@@ -55,10 +74,13 @@ do_deploy_append() {
 
     # Extract environment from u-boot compile
     ${OBJCOPY} -O binary -j ".rodata.default_environment" ${B}/env/common.o ${B}/rawenv.bin
+
     # Convert NUL bytes to newline
     tr "\0" "\n" <${B}/rawenv.bin >${B}/rawenv.txt
+
     mkenvimage -s ${ENV_IMAGE_SIZE} -o ${DEPLOYDIR}/${UBOOT_ENV_NAME}-${PV}-${PR} ${B}/rawenv.txt
     ln -sf ${UBOOT_ENV_NAME}-${PV}-${PR} ${DEPLOYDIR}/${UBOOT_ENV_NAME}
+
     # Remove before flight
     # rm ${B}/rawenv.bin ${B}/rawenv.txt
 
