@@ -177,7 +177,7 @@
 		};
 
 		u-boot@800000 {
-			label = "U-Boot";
+			label = "u-boot";
 			reg = /bits/ 64 <0x800000 0x400000>;
 		};
 
