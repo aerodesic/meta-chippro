@@ -7,4 +7,4 @@ execute() {
 
 execute iwpriv wlan0 mp_stop
 execute ifconfig wlan0 down
-execute modprobe -r 8723bs
+execute modprobe -r r8723bs
