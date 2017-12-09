@@ -18,7 +18,7 @@ do_compile[depends] += "u-boot-chip:do_deploy"
 do_deploy() {
 
     # Create the flashing script
-    cat > ${DEPLOYDIR}/flash_CHIP_board.sh-${PV}-${PR} <<-EOF
+    cat > ${DEPLOYDIR}/flash_CHIP_board.sh <<-EOF
 	#!/bin/bash
 	# flash_CHIP_board.sh <image name>
 	# will default to environment variable UBI_IMAGE if set.
@@ -41,26 +41,24 @@ do_deploy() {
 
 	if [ "\${1}" == "--bootloader" ]; then
 	    # boot the fastboot program loader
-	    sunxi-fel uboot ${SPL_BINARY} write ${UBOOT_SCRIPTADDR} boot.scr
+	    sunxi-fel uboot u-boot-sunxi-with-spl.bin write ${UBOOT_SCRIPTADDR} boot.scr
 	    sleep 8
 	fi
 
 	fastboot ${VID} erase spl
 	fastboot ${VID} erase spl-backup
-	fastboot ${VID} flash spl           ${SPL_ECC_BINARY}
-	fastboot ${VID} flash spl-backup    ${SPL_ECC_BINARY}
+	fastboot ${VID} flash spl           spl-40000-1000-100.bin
+	fastboot ${VID} flash spl-backup    spl-40000-1000-100.bin
 
 	fastboot ${VID} erase uboot
-	fastboot ${VID} flash uboot         ${UBOOT_BINARY}
+	fastboot ${VID} flash uboot         uboot-40000.bin
 
 	fastboot ${VID} erase UBI
 	fastboot ${VID} flash UBI           \${UBI_IMAGE}
 	fastboot ${VID} continue -u
 	EOF
 
-    chmod +x ${DEPLOYDIR}/flash_CHIP_board.sh-${PV}-${PR}
-
-    ln -sf flash_CHIP_board.sh-${PV}-${PR} ${DEPLOYDIR}/flash_CHIP_board.sh
+    chmod +x ${DEPLOYDIR}/flash_CHIP_board.sh
 }
 
 

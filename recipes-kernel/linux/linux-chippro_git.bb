@@ -22,6 +22,11 @@ SRC_URI = "git://github.com/NextThingCo/CHIP-linux.git;protocol=git;branch=${BRA
 
 S = "${WORKDIR}/git"
 
+# Add in our own interpretation of the dts file
+do_configure_prepend() {
+    cp ${WORKDIR}/ntc-gr8-crumb.dts ${S}/arch/arm/boot/dts/
+}
+
 do_configure_append() {
         # Check for kernel config fragments.  The assumption is that the config
         # fragment will be specified with the absolute path.  For example:
