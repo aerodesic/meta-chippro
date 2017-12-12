@@ -46,15 +46,20 @@ do_deploy() {
 	fi
 
 	fastboot ${VID} erase spl
+	fastboot ${VID} flash spl           sunxi-spl-with-ecc.bin
+
 	fastboot ${VID} erase spl-backup
-	fastboot ${VID} flash spl           spl-40000-1000-100.bin
-	fastboot ${VID} flash spl-backup    spl-40000-1000-100.bin
+	fastboot ${VID} flash spl-backup    sunxi-spl-with-ecc.bin
 
 	fastboot ${VID} erase uboot
-	fastboot ${VID} flash uboot         uboot-40000.bin
+	fastboot ${VID} flash uboot         u-boot-dtb.bin
+
+	fastboot ${VID} erase uboot-backup
+	fastboot ${VID} flash uboot-backup  u-boot-dtb.bin
 
 	fastboot ${VID} erase UBI
 	fastboot ${VID} flash UBI           \${UBI_IMAGE}
+
 	fastboot ${VID} continue -u
 	EOF
 

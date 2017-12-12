@@ -42,7 +42,7 @@
  *     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  *     OTHER DEALINGS IN THE SOFTWARE.
  *
- *  Modified by G. Oliver <go@ao-cs.com> for use in new chippro build.
+ *  Modified by G. Oliver <go@ao-cs.com> for use in rvpro sterilizer
  */
 
 /dts-v1/;
@@ -168,27 +168,27 @@
 
 		spl@0 {
 			label = "spl";
-			reg = /bits/ 64 <0x0 0x400000>;
+			reg = /bits/ 64 <0x00000000 0x00400000>;
 		};
 
 		spl-backup@400000 {
 			label = "spl-backup";
-			reg = /bits/ 64 <0x400000 0x400000>;
+			reg = /bits/ 64 <0x00400000 0x00400000>;
 		};
 
 		u-boot@800000 {
 			label = "u-boot";
-			reg = /bits/ 64 <0x800000 0x400000>;
+			reg = /bits/ 64 <0x00800000 0x00400000>;
 		};
 
-		u-boot-backup@c00000 {
+		u-boot-backup@C00000 {
 			label = "u-boot-backup";
-			reg = /bits/ 64 <0xc00000 0x400000>;
+			reg = /bits/ 64 <0x00C00000 0x00400000>;
 		};
 
 		UBI@1000000 {
 			label = "UBI";
-			reg = /bits/ 64 <0x1000000 0x1ff000000>;
+			reg = /bits/ 64 <0x01000000 0x1ff000000>;
 		};
 	};
 };

@@ -34,7 +34,7 @@ index c50d6eb..e0af5b7 100644
 +config UBI_BOOT_BOOTARGS
 +	string "UBI extra bootargs for zImage ubi boot"
 +	depends on USE_UBI_BOOT_ZIMAGE
-+	default "ubi.mtd=4 ubi.fm_autoconvert=1 quiet"
++	default "ubi.fm_autoconvert=1 quiet"
 +	help
 +	  Extra boot arguments specifially for zImage UBI boot
 +
@@ -88,7 +88,7 @@ index e0d0034..31109ea 100644
 + *   CONFIG_USE_UBI_BOOT_ZIMAGE      enables this boot method (default=N)
 + *   CONFIG_UBI_BOOT_PART            name of UBI partition (defaults to 'UBI')
 + *   CONFIG_UBI_BOOT_BOOTARGS        Bootargs spefically for zimage UBI boot
-+ *                                   (defaults to 'quiet ubi.mtd=4 ubi.fm_autoconvert=1')
++ *                                   (defaults to 'quiet ubi.fm_autoconvert=1')
 + *   CONFIG_UBI_BOOT_FSVOL           name of rootfs base volume (default to 'rootfs')
 + *   CONFIG_UBI_BOOT_FDTVOL          name of fdt base volume (default to 'fdt')
 + *   CONFIG_UBI_BOOT_IMAGE_SUFFIXES  name(s) of image suffixes (default to '')
@@ -115,7 +115,7 @@ index e0d0034..31109ea 100644
 +	      "ubifsload ${kernel_addr_r} boot/zImage && "			\
 +	      "ubi read ${fdt_addr_r} ${fdtvol}; then "				\
 +	    "setenv bootargs \"root=ubi${devnum}:${fsvol} "			\
-+		      "rootfstype=ubifs "					\
++		      "rootfstype=ubifs ubi.mtd=" CONFIG_UBI_BOOT_PART " "	\
 +		      UBI_ROOT_RO_STRING " " CONFIG_UBI_BOOT_BOOTARGS " "	\
 +		      "\";"							\
 +	    "echo Booting ubi${devnum}:${fsvol}/boot/zImage;"			\
@@ -132,8 +132,8 @@ index e0d0034..31109ea 100644
 +	    "run boot_one_zimage;"						\
 +	  "else "								\
 +	    "for suffix in " CONFIG_UBI_BOOT_IMAGE_SUFFIXES "; do "		\
-+	      "setenv fsvol \"" CONFIG_UBI_BOOT_FSVOL "_${suffix}\";"		\
-+	      "setenv fdtvol \"" CONFIG_UBI_BOOT_FDTVOL "_${suffix}\";"		\
++	      "setenv fsvol \"" CONFIG_UBI_BOOT_FSVOL "${suffix}\";"		\
++	      "setenv fdtvol \"" CONFIG_UBI_BOOT_FDTVOL "${suffix}\";"		\
 +	      "run boot_one_zimage;"						\
 +           "done;"								\
 +	  "fi"									\

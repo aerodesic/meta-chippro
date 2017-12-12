@@ -18,60 +18,25 @@ PV = "git${SRCPV}"
 # Same version as u-boot-mkimage-native
 SRCREV = "0c4d24823ed28c94dae56a10a66687c69b70c1d1"
 
-SRC_URI = "git://github.com/u-boot/u-boot.git \
-           file://CHIP_pro_defconfig \
-           file://uboot.script \
-           file://0001-Added-host-path-to-libfdt-build.patch \
-           file://0002-Add-booting-from-UBI-volume-zImages.patch \
-           file://0003-Change-mutex_is_locked-to-return-TRUE-rather-than-FA.patch \
-           "
+SRC_URI = " \
+	git://github.com/u-boot/u-boot.git \
+	file://CHIP_pro_defconfig \
+	file://uboot.script \
+	file://0001-Added-host-path-to-libfdt-build.patch \
+	file://0002-Add-booting-from-UBI-volume-zImages.patch \
+	file://0003-Change-mutex_is_locked-to-return-TRUE-rather-than-FA.patch \
+    "
 
 
 S = "${WORKDIR}/git"
 
-do_configure_prepend() {
-    cp ${WORKDIR}/CHIP_pro_defconfig ${S}/configs/
-}
-
 do_compile_prepend() {
-    install -d -m 755 ${DEPLOYDIR}
-    mkimage -A arm -T script -C none -n "Flash" -d "${WORKDIR}/uboot.script" "${DEPLOYDIR}/boot.scr"
+    # Install the local copy of the defconfig
+    install ${WORKDIR}/CHIP_pro_defconfig ${S}/configs/
 }
  
-do_compile_append() {
-#     # Create padded version of u-boot-dtb.bin
-#     ${OBJCOPY} 			\
-# 	--pad-to=0xc0000	\
-# 	--gap-fill=0xFF		\
-# 	-j .text		\
-# 	-j .secure_text		\
-# 	-j .rodata		\
-# 	-j .hash		\
-# 	-j .data		\
-# 	-j .got			\
-# 	-j .got.plt		\
-# 	-j .u_boot_list		\
-# 	-j .rel_dyn		\
-# 	--gap-fill=0xFF		\
-# 	-I binary		\
-# 	-O binary		\
-# 	${B}/u-boot-dtb.bin	\
-# 	${B}/${UBOOT_BINARY}
-# 
-    install ${B}/spl/${SPL_ECC_BINARY} ${B}/${SPL_ECC_BINARY}
-    install ${B}/spl/sunxi-spl.bin ${B}/sunxi-spl.bin
-    # Move the file if necessary
-    if [ -e ${B}/spl/${SPL_BINARY} ] ; then
-      install ${B}/spl/${SPL_BINARY} ${B}/${SPL_BINARY}
-    fi
-}
- 
-
 # Install some things left out of base module
 do_deploy_append() {
-#    install -m 644 ${B}/${SPL_ECC_BINARY} ${DEPLOYDIR}/${SPL_ECC_BINARY}-${PV}-${PR}
-#    ln -sf ${SPL_ECC_BINARY}-${PV}-${PR} ${DEPLOYDIR}/${SPL_ECC_BINARY}
-    install -m 644 ${B}/${SPL_ECC_BINARY} ${DEPLOYDIR}/${SPL_ECC_BINARY}
 
     # Extract environment from u-boot compile
     ${OBJCOPY} -O binary -j ".rodata.default_environment" ${B}/env/common.o ${B}/rawenv.bin
@@ -79,13 +44,19 @@ do_deploy_append() {
     # Convert NUL bytes to newline
     tr "\0" "\n" <${B}/rawenv.bin >${B}/rawenv.txt
 
-#    mkenvimage -s ${ENV_IMAGE_SIZE} -o ${DEPLOYDIR}/${UBOOT_ENV_NAME}-${PV}-${PR} ${B}/rawenv.txt
-#    ln -sf ${UBOOT_ENV_NAME}-${PV}-${PR} ${DEPLOYDIR}/${UBOOT_ENV_NAME}
     mkenvimage -s ${ENV_IMAGE_SIZE} -o ${DEPLOYDIR}/${UBOOT_ENV_NAME} ${B}/rawenv.txt
 
-    # Remove before flight
-    # rm ${B}/rawenv.bin ${B}/rawenv.txt
+    # Strip out the mtd information and add it to the boot text script
+    grep "^mtd" ${B}/rawenv.txt >${B}/boot.txt
+    cat ${WORKDIR}/uboot.script >>${B}/boot.txt
 
-#    install -m 644 ${B}/${UBOOT_BINARY} ${DEPLOYDIR}/${UBOOT_BINARY}-${PV}-${PR}
-#    ln -sf ${UBOOT_BINARY}-${PV}-${PR} ${DEPLOYDIR}/${UBOOT_BINARY}
+    install ${B}/spl/${SPL_ECC_BINARY} ${DEPLOYDIR}
+    install ${B}/spl/sunxi-spl.bin ${DEPLOYDIR}
+    install ${B}/${SPL_BINARY} ${DEPLOYDIR}
+
+    mkimage -A arm -T script -C none -n "Flash" -d "${B}/boot.txt" "${DEPLOYDIR}/boot.scr"
+
+    # Remove before flight
+    # rm ${B}/rawenv.bin ${B}/rawenv.txt ${B}/boot.txt
 }
+
