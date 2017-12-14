@@ -1,6 +1,0 @@
-mw ${scriptaddr} 0x0
-sleep 4
-fastboot 0
-env default -a
-ubi part UBI
-boot

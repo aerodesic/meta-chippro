@@ -211,11 +211,11 @@ index e604e4e..9be9a75 100755
 -prepare_spl $OUTPUTDIR $UBOOTDIR/spl/sunxi-spl.bin 4194304 16384 1280
 -# Hynix MLC image:
 -prepare_spl $OUTPUTDIR $UBOOTDIR/spl/sunxi-spl.bin 4194304 16384 1664
-+# prepare_spl $OUTPUTDIR $UBOOTDIR/spl/sunxi-spl.bin 262144 4096 256
++# prepare_spl $OUTPUTDIR $UBOOTDIR/sunxi-spl.bin 262144 4096 256
 +# # Toshiba MLC image:
-+# prepare_spl $OUTPUTDIR $UBOOTDIR/spl/sunxi-spl.bin 4194304 16384 1280
++# prepare_spl $OUTPUTDIR $UBOOTDIR/sunxi-spl.bin 4194304 16384 1280
 +# # Hynix MLC image:
-+# prepare_spl $OUTPUTDIR $UBOOTDIR/spl/sunxi-spl.bin 4194304 16384 1664
++# prepare_spl $OUTPUTDIR $UBOOTDIR/sunxi-spl.bin 4194304 16384 1664
  
 -## prepare uboot images ##
 -# Toshiba SLC image:
@@ -228,7 +228,7 @@ index e604e4e..9be9a75 100755
 +# # Toshiba/Hynix MLC image:
 +# prepare_uboot $OUTPUTDIR $UBOOTDIR/u-boot-dtb.bin 4194304
 +
-+prepare_spl $UBOOTDIR $UBOOTDIR/spl/sunxi-spl.bin $ERASEBLOCKSIZE $PAGESIZE $OOBSIZE
++prepare_spl $UBOOTDIR $UBOOTDIR/sunxi-spl.bin $ERASEBLOCKSIZE $PAGESIZE $OOBSIZE
 +
 +prepare_uboot $UBOOTDIR $UBOOTDIR/u-boot-dtb.bin $ERASEBLOCKSIZE
 -- 
