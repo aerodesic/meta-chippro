@@ -11,10 +11,10 @@ COMPATIBLE_MACHINE = "chippro"
 PROVIDES += "u-boot"
 RDEPENDS_${PN}_append_chippro = " image-flasher"
 
+ENV_IMAGE ?= "${UBOOT_ENV_NAME}-${MACHINE}-${PN}-${PV}.bin"
 
 PV = "git${SRCPV}"
 
-# SRCREV ?= "0c4d24823ed28c94dae56a10a66687c69b70c1d1"
 # Same version as u-boot-mkimage-native
 SRCREV = "0c4d24823ed28c94dae56a10a66687c69b70c1d1"
 
@@ -25,10 +25,6 @@ SRC_URI = " \
 	file://0003-Change-mutex_is_locked-to-return-TRUE.patch \
     "
 
-#	file://flashboot.txt
-#	file://runboot.txt
-#	file://0002-Add-booting-from-UBI-volume-zImages.patch
-
 S = "${WORKDIR}/git"
 
 do_compile_prepend() {
@@ -37,15 +33,21 @@ do_compile_prepend() {
 }
  
 do_deploy_append() {
+
     install ${B}/spl/${SPL_ECC_BINARY} ${DEPLOYDIR}
     install ${B}/spl/sunxi-spl.bin ${DEPLOYDIR}
-    install ${B}/${SPL_BINARY} ${DEPLOYDIR}
 
     # Extract environment from u-boot compile (so that items from the u-boot config get through)
     ${OBJCOPY} -O binary -j ".rodata.default_environment" ${B}/env/common.o ${B}/rawenv.bin
 
     # Convert NUL bytes to newline
-    tr "\0" "\n" <${B}/rawenv.bin >${DEPLOYDIR}/${UBOOT_ENV_NAME}.base.txt
+    tr "\0" "\n" <${B}/rawenv.bin >${B}/${ENV_IMAGE}.base.txt
+
+    install -d ${DEPLOYDIR}
+    # install ${B}/${UBOOT_ENV_NAME}-${MACHINE}-${BUILD_ID}.base.txt ${DEPLOYDIR}
+    # ln -sf ${UBOOT_ENV_NAME}-${MACHINE}-${BUILD_ID}.base.txt ${DEPLOYDIR}/${UBOOT_ENV_NAME}.base.txt
+    install ${B}/${ENV_IMAGE}.base.txt ${DEPLOYDIR}
+    ln -sf ${ENV_IMAGE}.base.txt ${DEPLOYDIR}/${UBOOT_ENV_NAME}.base.txt
 
     rm ${B}/rawenv.bin
 }

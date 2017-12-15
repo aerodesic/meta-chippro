@@ -51,6 +51,9 @@ do_deploy() {
 	fastboot ${VID} erase spl-backup
 	fastboot ${VID} flash spl-backup    sunxi-spl-with-ecc.bin
 
+	fastboot ${VID} erase uboot-env
+	fastboot ${VID} flash uboot-env     u-boot-env.bin
+
 	fastboot ${VID} erase uboot
 	fastboot ${VID} flash uboot         u-boot-dtb.bin
 

@@ -12,7 +12,7 @@ diff --git a/chip-create-nand-images.sh b/chip-create-nand-images.sh
 index e604e4e..9be9a75 100755
 --- a/chip-create-nand-images.sh
 +++ b/chip-create-nand-images.sh
-@@ -3,82 +3,87 @@
+@@ -3,82 +3,88 @@
  SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
  source $SCRIPTDIR/common.sh
  
@@ -101,9 +101,10 @@ index e604e4e..9be9a75 100755
 -}
 +# ROOTFSTAR="$2"
 +# OUTPUTDIR="$3"
-+ERASEBLOCKSIZE="$2"
-+PAGESIZE="$3"
-+OOBSIZE="$4"
++OUTPUTDIR="$2"
++ERASEBLOCKSIZE="$3"
++PAGESIZE="$4"
++OOBSIZE="$5"
 +
 +# UBI Created outside of this
 +# # build the UBI image
@@ -228,9 +229,9 @@ index e604e4e..9be9a75 100755
 +# # Toshiba/Hynix MLC image:
 +# prepare_uboot $OUTPUTDIR $UBOOTDIR/u-boot-dtb.bin 4194304
 +
-+prepare_spl $UBOOTDIR $UBOOTDIR/sunxi-spl.bin $ERASEBLOCKSIZE $PAGESIZE $OOBSIZE
++prepare_spl $OUTPUTDIR $UBOOTDIR/sunxi-spl.bin $ERASEBLOCKSIZE $PAGESIZE $OOBSIZE
 +
-+prepare_uboot $UBOOTDIR $UBOOTDIR/u-boot-dtb.bin $ERASEBLOCKSIZE
++prepare_uboot $OUTPUTDIR $UBOOTDIR/u-boot-dtb.bin $ERASEBLOCKSIZE
 -- 
 2.7.4
 

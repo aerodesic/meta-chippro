@@ -2,7 +2,7 @@ DESCRIPTION = "Creates base chippro image."
 
 # Base this image on core-image-minimal
 # include recipes-core/images/core-image-minimal.bb
-inherit core-image
+inherit core-image deploy
 
 DEPENDS += "u-boot chip-tools-native sunxi-tools-native u-boot-mkimage-native android-tools-native coreutils-native"
 
@@ -22,7 +22,7 @@ do_create_image() {
 	fastboot 0
 	EOF
 
-    cat >${DEPLOY_DIR_IMAGE}/${UBOOT_ENV_NAME}.txt <<-EOF
+    cat >${WORKDIR}/runboot.txt <<-EOF
 	bootdelay=2
 	baudrate=115200
 	preboot=
@@ -83,13 +83,16 @@ do_create_image() {
     sed -i -e "s/[[:space:]]\+/ /g"				${WORKDIR}/flashboot.txt
     sed -i -e "s/^\(.*\\)[[:space:]]*=[[:space:]]/\1=/g"	${WORKDIR}/flashboot.txt
 
-    sed -i -e "s/[[:space:]]\+/ /g"				${DEPLOY_DIR_IMAGE}/${UBOOT_ENV_NAME}.txt
-    sed -i -e "s/^\(.*\\)[[:space:]]*=[[:space:]]/\1=/g"	${DEPLOY_DIR_IMAGE}/${UBOOT_ENV_NAME}.txt
+    sed -i -e "s/[[:space:]]\+/ /g"				${WORKDIR}/runboot.txt
+    sed -i -e "s/^\(.*\\)[[:space:]]*=[[:space:]]/\1=/g"	${WORKDIR}/runboot.txt
 
-    chip-create-nand-images.sh ${DEPLOY_DIR_IMAGE} ${NAND_ERASE_BLOCK_SIZE} ${NAND_PAGE_SIZE} ${NAND_OOB_SIZE}
+    chip-create-nand-images.sh ${DEPLOY_DIR_IMAGE} ${B} ${NAND_ERASE_BLOCK_SIZE} ${NAND_PAGE_SIZE} ${NAND_OOB_SIZE}
+
+    # install ${B}/sunxi-spl.bin ${DEPLOY_DIR_IMAGE}
 
     # Create boot.scr
-    mkimage -A arm -T script -C none -n "Flash" -d "${WORKDIR}/flashboot.txt" "${DEPLOY_DIR_IMAGE}/boot.scr"
+    mkimage -A arm -T script -C none -n "Flash" -d "${WORKDIR}/flashboot.txt" "${B}/boot.scr"
+    install ${B}/boot.scr ${DEPLOY_DIR_IMAGE}
 
     # Strip out the mtd information and add it to the boot text script
     grep "^mtd" ${DEPLOY_DIR_IMAGE}/${UBOOT_ENV_NAME}.base.txt >>${DEPLOY_DIR_IMAGE}/${UBOOT_ENV_NAME}.txt
@@ -97,6 +100,8 @@ do_create_image() {
     # Extract bootargs and rename
     sed -n -e "s/bootargs=\(.*\)/extrabootargs=\1/p" <${DEPLOY_DIR_IMAGE}/${UBOOT_ENV_NAME}.base.txt >>${DEPLOY_DIR_IMAGE}/${UBOOT_ENV_NAME}.txt
 
-    mkenvimage -s ${ENV_IMAGE_SIZE} -o ${DEPLOY_DIR_IMAGE}/${UBOOT_ENV_NAME} ${DEPLOY_DIR_IMAGE}/${UBOOT_ENV_NAME}.txt
-}
+    # mkenvimage -s ${ENV_IMAGE_SIZE} -o ${DEPLOY_DIR_IMAGE}/${UBOOT_ENV_NAME} ${DEPLOY_DIR_IMAGE}/${UBOOT_ENV_NAME}.txt
 
+    mkenvimage -s ${ENV_IMAGE_SIZE} -o ${B}/${UBOOT_ENV_NAME} ${DEPLOY_DIR_IMAGE}/${UBOOT_ENV_NAME}.txt
+    install ${B}/${UBOOT_ENV_NAME} ${DEPLOY_DIR_IMAGE}
+}
