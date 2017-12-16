@@ -1,0 +1,179 @@
+From 1f158aaa744cc3d4b98547a20f34922d261acbca Mon Sep 17 00:00:00 2001
+From: Gary Oliver <go@aerodesic.com>
+Date: Fri, 15 Dec 2017 23:51:00 -0800
+Subject: [PATCH] modified to work  with image_class ubi builds
+
+---
+ chip-create-nand-images.sh | 127 ++++++---------------------------------------
+ 1 file changed, 17 insertions(+), 110 deletions(-)
+
+diff --git a/chip-create-nand-images.sh b/chip-create-nand-images.sh
+index e604e4e..6ec1c69 100755
+--- a/chip-create-nand-images.sh
++++ b/chip-create-nand-images.sh
+@@ -3,87 +3,18 @@
+ SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+ source $SCRIPTDIR/common.sh
+ 
+-if [[ -z $(which ${MKFS_UBIFS}) ]]; then
+-  echo "Could not find ${MKFS_UBIFS} in path."
+-  echo "Install it with the CHIP-SDK setup script."
+-  echo "You will also need to run this script as root."
+-  exit 1
+-fi
+-
+-UBOOTDIR="$1"
+-ROOTFSTAR="$2"
+-OUTPUTDIR="$3"
+-
+-# build the UBI image
+-prepare_ubi() {
+-  local tmpdir=`mktemp -d -t chip-ubi-XXXXXX`
+-  local rootfs=$tmpdir/rootfs
+-  local ubifs=$tmpdir/rootfs.ubifs
+-  local ubicfg=$tmpdir/ubi.cfg
+-  local outputdir="$1"
+-  local rootfstar="$2"
+-  local nandtype="$3"
+-  local maxlebcount="$4"
+-  local eraseblocksize="$5"
+-  local pagesize="$6"
+-  local subpagesize="$7"
+-  local oobsize="$8"
+-  local ebsize=`printf %x $eraseblocksize`
+-  local psize=`printf %x $pagesize`
+-  local osize=`printf %x $oobsize`
+-  local ubi=$outputdir/chip-$ebsize-$psize-$osize.ubi
+-  local sparseubi=$outputdir/chip-$ebsize-$psize-$osize.ubi.sparse
+-  local mlcopts=""
+-
+-  if [ -z $subpagesize ]; then
+-    subpagesize=$pagesize
+-  fi
+-
+-  if [ "$nandtype" = "mlc" ]; then
+-    lebsize=$((eraseblocksize/2-$pagesize*2))
+-    mlcopts="-M dist3"
+-  elif [ $subpagesize -lt $pagesize ]; then
+-    lebsize=$((eraseblocksize-pagesize))
+-  else
+-    lebsize=$((eraseblocksize-pagesize*2))
+-  fi
+-  
+-  if [ "$osize" = "100" ]; then
+-    #TOSH_512_SLC
+-    volspec="vol_flags=autoresize"
+-  elif [ "$osize" = "500" ]; then
+-    #TOSH_4GB_MLC
+-    volspec="vol_size=3584MiB"
+-  elif [ "$osize" = "680" ]; then
+-    #HYNI_8GB_MLC
+-    volspec="vol_size=7168MiB"
+-  else
+-	echo "Unable to acquire appropriate volume size or flags, quitting!"
+-	exit 1
+-  fi
+-
+-  mkdir -p $rootfs
+-  tar -xf $rootfstar -C $rootfs
+-  ${MKFS_UBIFS} -d $rootfs -m $pagesize -e $lebsize -c $maxlebcount -o $ubifs
+-  echo "[rootfs]
+-mode=ubi
+-vol_id=0
+-$volspec
+-vol_type=dynamic
+-vol_name=rootfs
+-vol_alignment=1
+-image=$ubifs" > $ubicfg
+-
+-
+-  ubinize -o $ubi -p $eraseblocksize -m $pagesize -s $subpagesize $mlcopts $ubicfg
+-  img2simg $ubi $sparseubi $eraseblocksize
+-  rm -rf $tmpdir
+-}
++UBOOT_OUTPUT="$1"
++UBOOT_INPUT="$2"
++SPL_OUTPUT="$3"
++SPL_INPUT="$4"
++ERASEBLOCKSIZE="$5"
++PAGESIZE="$6"
++OOBSIZE="$7"
+ 
+ # build the SPL image
+ prepare_spl() {
+   local tmpdir=`mktemp -d -t chip-spl-XXXXXX`
+-  local outputdir=$1
++  local outputfile=$1
+   local spl=$2
+   local eraseblocksize=$3
+   local pagesize=$4
+@@ -94,7 +25,6 @@ prepare_spl() {
+   local ebsize=`printf %x $eraseblocksize`
+   local psize=`printf %x $pagesize`
+   local osize=`printf %x $oobsize`
+-  local nandrepeatedspl=$outputdir/spl-$ebsize-$psize-$osize.bin
+   local padding=$tmpdir/padding
+   local splpadding=$tmpdir/nand-spl-padding
+ 
+@@ -110,9 +40,9 @@ prepare_spl() {
+     cat $nandspl $splpadding > $nandpaddedspl
+ 
+     if [ "$i" -eq "0" ]; then
+-      cat $nandpaddedspl > $nandrepeatedspl
++      cat $nandpaddedspl > $outputfile
+     else
+-      cat $nandpaddedspl >> $nandrepeatedspl
++      cat $nandpaddedspl >> $outputfile
+     fi
+ 
+     i=$((i+1))
+@@ -123,39 +53,16 @@ prepare_spl() {
+ 
+ # build the bootloader image
+ prepare_uboot() {
+-  local outputdir=$1
+-  local uboot=$2
++  local outputfile=$1
++  local inputfile=$2
+   local eraseblocksize=$3
+   local ebsize=`printf %x $eraseblocksize`
+-  local paddeduboot=$outputdir/uboot-$ebsize.bin
+ 
+-  dd if=$uboot of=$paddeduboot bs=$eraseblocksize conv=sync
++  dd if=$inputfile of=$outputfile bs=$eraseblocksize conv=sync
+ }
+ 
+-## copy the source images in the output dir ##
+-mkdir -p $OUTPUTDIR
+-cp $UBOOTDIR/spl/sunxi-spl.bin $OUTPUTDIR/
+-cp $UBOOTDIR/u-boot-dtb.bin $OUTPUTDIR/
+-cp $ROOTFSTAR $OUTPUTDIR/
+-
+-## prepare ubi images ##
+-# Toshiba SLC image:
+-prepare_ubi $OUTPUTDIR $ROOTFSTAR "slc" 2048 262144 4096 1024 256
+-# Toshiba MLC image:
+-prepare_ubi $OUTPUTDIR $ROOTFSTAR "mlc" 4096 4194304 16384 16384 1280
+-# Hynix MLC image:
+-prepare_ubi $OUTPUTDIR $ROOTFSTAR "mlc" 4096 4194304 16384 16384 1664
+-
+-## prepare spl images ##
+-# Toshiba SLC image:
+-prepare_spl $OUTPUTDIR $UBOOTDIR/spl/sunxi-spl.bin 262144 4096 256
+-# Toshiba MLC image:
+-prepare_spl $OUTPUTDIR $UBOOTDIR/spl/sunxi-spl.bin 4194304 16384 1280
+-# Hynix MLC image:
+-prepare_spl $OUTPUTDIR $UBOOTDIR/spl/sunxi-spl.bin 4194304 16384 1664
++# sunxi-spl.bin
++prepare_spl $SPL_OUTPUT $SPL_INPUT $ERASEBLOCKSIZE $PAGESIZE $OOBSIZE
+ 
+-## prepare uboot images ##
+-# Toshiba SLC image:
+-prepare_uboot $OUTPUTDIR $UBOOTDIR/u-boot-dtb.bin 262144
+-# Toshiba/Hynix MLC image:
+-prepare_uboot $OUTPUTDIR $UBOOTDIR/u-boot-dtb.bin 4194304
++# u-boot-dtb.bin
++prepare_uboot $UBOOT_OUTPUT $UBOOT_INPUT $ERASEBLOCKSIZE
+-- 
+2.7.4
+

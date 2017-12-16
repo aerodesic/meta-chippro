@@ -13,7 +13,7 @@ diff --git a/common/Kconfig b/common/Kconfig
 index c50d6eb..e0af5b7 100644
 --- a/common/Kconfig
 +++ b/common/Kconfig
-@@ -200,6 +200,57 @@ config BOOTARGS
+@@ -200,6 +200,64 @@ config BOOTARGS
  	  CONFIG_BOOTARGS goes into the environment value "bootargs". Note that
  	  this value will also override the "chosen" node in FDT blob.
  
@@ -30,6 +30,13 @@ index c50d6eb..e0af5b7 100644
 +	default UBI
 +	help
 +	  This is the name of the ubi partition to search.
++
++config UBI_BOOT_PART_OFFSET
++	string "Offset applied to UBI boot partition"
++	depends on USE_UBI_BOOT_ZIMAGE
++	default 2048
++	help
++	  This is the default (skipping the header) of UBI partition.
 +
 +config UBI_BOOT_BOOTARGS
 +	string "UBI extra bootargs for zImage ubi boot"
@@ -75,7 +82,7 @@ diff --git a/include/config_distro_bootcmd.h b/include/config_distro_bootcmd.h
 index e0d0034..31109ea 100644
 --- a/include/config_distro_bootcmd.h
 +++ b/include/config_distro_bootcmd.h
-@@ -68,6 +68,75 @@
+@@ -68,6 +68,77 @@
  	BOOT_TARGET_DEVICES_references_MMC_without_CONFIG_CMD_MMC
  #endif
  
@@ -87,6 +94,7 @@ index e0d0034..31109ea 100644
 + * Controlled by these CONFIG variables:
 + *   CONFIG_USE_UBI_BOOT_ZIMAGE      enables this boot method (default=N)
 + *   CONFIG_UBI_BOOT_PART            name of UBI partition (defaults to 'UBI')
++ *   CONFIG_UBI_BOOT_PART_OFFSET     Offset to skip ECC header of partition
 + *   CONFIG_UBI_BOOT_BOOTARGS        Bootargs spefically for zimage UBI boot
 + *                                   (defaults to 'quiet ubi.fm_autoconvert=1')
 + *   CONFIG_UBI_BOOT_FSVOL           name of rootfs base volume (default to 'rootfs')
@@ -115,9 +123,10 @@ index e0d0034..31109ea 100644
 +	      "ubifsload ${kernel_addr_r} boot/zImage && "			\
 +	      "ubi read ${fdt_addr_r} ${fdtvol}; then "				\
 +	    "setenv bootargs \"root=ubi${devnum}:${fsvol} "			\
-+		      "rootfstype=ubifs ubi.mtd=" CONFIG_UBI_BOOT_PART ",2048 "	\
-+		      UBI_ROOT_RO_STRING " " CONFIG_UBI_BOOT_BOOTARGS " "	\
-+		      "\";"							\
++		"rootfstype=ubifs "						\
++		"ubi.mtd=" CONFIG_UBI_BOOT_PART "," CONFIG_UBI_BOOT_PART_OFFSET	\
++			" " UBI_ROOT_RO_STRING " " CONFIG_UBI_BOOT_BOOTARGS " "	\
++			"\";"							\
 +	    "echo Booting ubi${devnum}:${fsvol}/boot/zImage;"			\
 +	    "echo Using bootargs ${bootargs};"					\
 +	    "bootz ${kernel_addr_r} - ${fdt_addr_r};"				\
@@ -125,7 +134,7 @@ index e0d0034..31109ea 100644
 +	  "\0"									\
 +										\
 +	"boot_from_zimage=" 							\
-+	  "ubi part " CONFIG_UBI_BOOT_PART ";"					\
++	  "ubi part " CONFIG_UBI_BOOT_PART " " CONFIG_UBI_BOOT_PART_OFFSET ";"	\
 +	  "if test -z \"" CONFIG_UBI_BOOT_IMAGE_SUFFIXES "\"; then "		\
 +	    "setenv fsvol \"" CONFIG_UBI_BOOT_FSVOL "\";"			\
 +	    "setenv fdtvol \"" CONFIG_UBI_BOOT_FDTVOL "\";"			\

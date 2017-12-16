@@ -14,7 +14,7 @@ PV = "git${SRCPV}"
 
 SRCREV = "f79fe329d9299fdec17478844afe960acbcc8fad"
 SRC_URI = "git://github.com/NextThingCo/CHIP-tools.git;branch=chip/stable \
-           file://0001-modified-to-handle-image_class-ubi-builds.patch \
+           file://0001-modified-to-work-with-image_class-ubi-builds.patch \
            "
 
 S = "${WORKDIR}/git"
