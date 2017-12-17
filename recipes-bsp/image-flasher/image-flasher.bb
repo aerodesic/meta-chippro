@@ -19,7 +19,7 @@ do_compile[depends] += "u-boot-chip:do_deploy"
 do_deploy() {
 
     # Create the flashing script
-    cat > ${DEPLOYDIR}/flash_CHIP_board.sh <<-EOF
+    cat > ${DEPLOYDIR}/flash_board.sh <<-EOF
 	#!/bin/bash
 	UBI_IMAGE=\${1}
 
@@ -54,7 +54,7 @@ do_deploy() {
 
 	EOF
 
-    chmod +x ${DEPLOYDIR}/flash_CHIP_board.sh
+    chmod +x ${DEPLOYDIR}/flash_board.sh
 }
 
 
