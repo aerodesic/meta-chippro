@@ -6,7 +6,7 @@ inherit deploy
 
 COMPATIBLE_MACHINE = "chippro"
 
-UBOOT_SCRIPTADDR ?= "0x43100000"
+UBOOT_SCRIP_TADDR ?= "0x43100000"
 
 # DEPENDS = "u-boot-mkimage-native"
 
@@ -34,12 +34,16 @@ do_deploy() {
 	echo Starting SPL
 	sunxi-fel spl sunxi-spl.bin
 	sleep 1
+
 	echo Writing ${UBOOT_INSTALL_FILE} to ram
 	sunxi-fel write ${UBOOT_MEM_ADDR} ${UBOOT_INSTALL_FILE}
+
 	echo Writing ${SPL_INSTALL_FILE} to ram
 	sunxi-fel write ${SPL_MEM_ADDR} ${SPL_INSTALL_FILE}
+
 	echo Writing uboot commands ram
 	sunxi-fel write ${UBOOT_SCRIPT_ADDR} ${UBOOT_SCRIPT_BASE_NAME}.bin
+
 	echo Starting boot
 	sunxi-fel exe ${UBOOT_MEM_ADDR}
 

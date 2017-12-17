@@ -1,0 +1,269 @@
+diff --git a/meta/classes/image_types.bbclass b/meta/classes/image_types.bbclass
+index b373b21..89109e0 100644
+--- a/meta/classes/image_types.bbclass
++++ b/meta/classes/image_types.bbclass
+@@ -214,6 +214,246 @@ IMAGE_CMD_ubi () {
+ 
+ IMAGE_CMD_ubifs = "mkfs.ubifs -r ${IMAGE_ROOTFS} -o ${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubifs ${MKUBIFS_ARGS}"
+ 
++# Multiple volume ubi
++# Controlled by vars:
++#    UBIVOL_NAMES         - a list of volumes to be created into a ubi/ubifs (a list of xxx)
++#    UBIVOL_IMAGE_xxx     - The source image for xxx
++#      Special names:
++#        <rootfs>         - image is system constructed rootfs
++#    UBIVOL_NAME_xxx      - The name that will be used as volume name
++#    UBIVOL_MODE_xxx      - Mode of xxx (currently only 'ubi' is supported)
++#    UBIVOL_TYPE_xxx      - Type of xxx ('dynamic', 'static')
++#    UBIVOL_FLAGS_xxx     - Flags for xxx (e.g. 'autoresize')
++#    UBIVOL_SIZE_xxx      - A size for xxx if needed.
++#    UBIVOL_ALIGNMENT_xxx - Alignment (defaults to 1)
++#    UBIVOL_MOUNT_xxx     - Mount point if needed (if missing, mount point will be NAME)
++#    UBIVOL_COPY_xxx      - If to copy from original rootfs, gives list of dirs and files.
++#    UBIVOL_RO_xxx        - Used to specify a read-only file system (rw if missing)
++#        E.g. UBIVOL_RO_xxx="yes"
++#
++
++IMAGE_CMD_ubimultivol () {
++
++	if [ -z "${UBIVOL_NAMES}" ] ; then
++            bbfatal "Missing volume names for ubimultivol"
++        fi
++
++	rm -f ubinize-${IMAGE_NAME}.cfg
++
++	id=0
++
++	# Make copy of rootfs
++	ROOTFS_COPY_DIR="${IMAGE_ROOTFS}/../rootfs-copy"
++	rm -rf ${ROOTFS_COPY_DIR}
++	# mkdir -p ${ROOTFS_COPY_DIR}
++	cp -ra ${IMAGE_ROOTFS} ${ROOTFS_COPY_DIR}
++	local remove_these_file_system_copies="${ROOTFS_COPY_DIR}"
++
++echo "IMGDEPLOYDIR='${IMGDEPLOYDIR}' DEPLOY_DIR_IMAGE='${DEPLOY_DIR_IMAGE}' IMAGE_ROOTFS='${IMAGE_ROOTFS}'"
++
++	for name in ${UBIVOL_NAMES}; do
++		eval local     vol_image=\"\$UBIVOL_IMAGE_${name}\"
++		eval local      vol_name=\"\$UBIVOL_NAME_${name}\"
++		eval local      vol_mode=\"\$UBIVOL_MODE_${name}\"
++		eval local      vol_type=\"\$UBIVOL_TYPE_${name}\"
++		eval local     vol_flags=\"\$UBIVOL_FLAGS_${name}\"
++		eval local      vol_size=\"\$UBIVOL_SIZE_${name}\"
++		eval local vol_alignment=\"\$UBIVOL_ALIGNMENT_${name}\"
++		eval local     vol_mount=\"\$UBIVOL_MOUNT_${name}\"
++		eval local      vol_copy=\"\$UBIVOL_COPY_${name}\"
++		eval local        vol_ro=\"\$UBIVOL_RO_${name}\"
++
++echo "name='${name}' vol_name='${vol_name}' vol_image='${vol_image}' vol_mode='${vol_mode}' vol_type='${vol_type}' vol_flags='${vol_flags}' vol_size='${vol_size}' vol_alignment='${vol_alignment}' vol_mount='${vol_mount}'"
++
++		if [ -z "${vol_name}" ]; then
++			bbfatal "Missing value for UBIVOL_NAME_$name"
++		fi
++
++		if [ -z "${vol_mode}" ]; then
++			vol_mode="ubi"
++		elif [ "X${vol_mode}" != "Xubi" ]; then
++			bbfatal "Only 'ubi' mode is currently supported"
++		fi
++
++		if [ -z "${vol_type}" ]; then
++			vol_type="dynamic"
++		fi
++
++		if [ -z "${vol_alignment}" ]; then
++			vol_alignment="1"
++		fi
++
++		if [ -z "{vol_ro}" ]; then
++			vol_ro="no"
++		fi
++
++		# If image name is '<rootfs>', substitute the name used for ubifs generation
++		if [ "X${vol_image}" = "X<rootfs>" ]; then
++			# This one comes from image deploy directory
++			IMAGE="${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubifs"
++			# Mark the rootfs readonly as appropriate
++			if [ "X${vol_ro}" = "Xyes" ]; then
++				# Make the root file system ro in fstab
++				sed -i -e 's/rw,noauto/ro,noauto/' ${ROOTFS_COPY_DIR}/etc/fstab
++			else
++				# Make the root file system rw in fstab
++				sed -i -e 's/ro,noauto/rw,noauto/' ${ROOTFS_COPY_DIR}/etc/fstab
++			fi
++
++		# If specified an image, then use it
++		elif [ -n "${vol_image}" ]; then
++			# All others from specified locations
++			IMAGE="${DEPLOY_DIR_IMAGE}/${vol_image}"
++
++		# Otherwise check to see if we are copying from something in the source rootfs
++		elif [ -n "${vol_copy}" ]; then
++			# if no mount name, use the fs surrogate name
++			if [ -z "${vol_mount}" ]; then
++				vol_mount="${name}"
++			fi
++
++			ROOTFS_OVERLAY="${IMAGE_ROOTFS}/../overlay-${name}"
++			rm -rf ${ROOTFS_OVERLAY}
++			mkdir -p ${ROOTFS_OVERLAY}
++
++			orig_dirname=""
++			force_overlay="no"
++			# There is either a link or mount
++			# Need to link items to a mounted file system
++			for item in ${vol_copy}; do
++				if [ -d "${ROOTFS_COPY_DIR}/${item}" ]; then
++					test_dir=`dirname ${item}/x`
++					# Copy contents of directory to target
++					cutdir=`echo ${item}/ | cut -d'/' -f2-`
++					if [ -n "${cutdir}" ]; then
++						mkdir -p ${ROOTFS_OVERLAY}/${cutdir}
++					fi
++					mv ${ROOTFS_COPY_DIR}/${item}/* ${ROOTFS_OVERLAY}/${cutdir}
++
++				elif [ -e "${ROOTFS_COPY_DIR}/${item}" ]; then
++					test_dir=`dirname  ${item}`
++					mkdir -p ${ROOTFS_OVERLAY}/`dirname ${item}`
++					mv ${ROOTFS_COPY_DIR}/${item} ${ROOTFS_OVERLAY}/`dirname ${item}`
++				fi
++
++				if [ -z "${orig_dirname}" ]; then
++					# Capture the first dirname referenced
++					orig_dirname="${test_dir}"
++				elif [ "X${orig_dirname}" != "X${test_dir}" ]; then
++					# More than  one TLD referenced, so force the overlay to occur
++					force_overlay="yes"
++				fi
++			done
++
++			if [ "X${force_overlay}" = "Xyes" ]; then
++				if [ "x/${vol_mount}" = "x${orig_dirname}" ]; then
++					# Names collide - change mount point to the original UID name and warn
++					bbwarn "Mount point '${vol_mount}' will collide with original; changing to '${vol_name}'"
++					vol_mount="${vol_name}"
++				fi
++
++				# Create the symbolic links from the original directory into the mounted fs
++				for item in ${vol_copy}; do
++					if [ -d "${ROOTFS_COPY_DIR}/${item}" ] || [ -e "${ROOTFS_COPY_DIR}/${item}" ]; then
++						# Create symbolic link in the rootfs to directory in the mounted fs
++						ln -sf /${vol_mount}/${item} ${ROOTFS_COPY_DIR}/${item}
++					fi
++				done
++			else
++				# Overlaying, so make sure mount point exists
++				mkdir -p ${ROOTFS_COPY_DIR}/${orig_dirname}
++			fi
++
++			# At this point, if the original TLD is non-empty or 'force_overlay' is set,
++			# Then we MUST create links to the items in the source directory, such that
++			# the links point into the mounted directory.  Otherwise, we can simply
++			# mount the target file system on top of the orig_dirname.
++
++			IMAGE="${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.${name}.ubifs"
++
++			# Create the ubifs for the data
++			mkfs.ubifs -r ${ROOTFS_OVERLAY} -o ${IMAGE} ${MKUBIFS_ARGS}
++
++			# Modify the fstab to mount the data image
++			if [ "X${vol_ro}" = "Xyes" ]; then
++				echo "ubi:${vol_name}     /${vol_mount}           ubifs   ro              0       0" >>${ROOTFS_COPY_DIR}/etc/fstab
++			else
++				echo "ubi:${vol_name}     /${vol_mount}           ubifs   rw              0       0" >>${ROOTFS_COPY_DIR}/etc/fstab
++			fi
++
++			# Add to clean-up list
++			remove_these_file_system_copies="${remove_these_file_system_copies} ${ROOTFS_OVERLAY}"
++
++		else
++			bbfatal "Missing value for UBIVOL_IMAGE_$name"
++		fi
++
++		# Write out the volume description
++		echo "[$name]"                           >> ubinize-${IMAGE_NAME}.cfg
++		echo "image=${IMAGE}"                    >> ubinize-${IMAGE_NAME}.cfg
++		echo "mode=${vol_mode}"                  >> ubinize-${IMAGE_NAME}.cfg
++		echo "vol_id=$id"                        >> ubinize-${IMAGE_NAME}.cfg
++		echo "vol_type=${vol_type}"              >> ubinize-${IMAGE_NAME}.cfg
++		echo "vol_name=${vol_name}"              >> ubinize-${IMAGE_NAME}.cfg
++		echo "vol_alignment=${vol_alignment}"    >> ubinize-${IMAGE_NAME}.cfg
++		if [ -n "${vol_size}" ]; then
++			echo "vol_size=${vol_size}"      >> ubinize-${IMAGE_NAME}.cfg
++		fi
++		if [ -n "${vol_flags}" ]; then
++			echo "vol_flags=${vol_flags}"    >> ubinize-${IMAGE_NAME}.cfg
++		fi
++
++		# Blank line between volumes
++		echo ""                                  >> ubinize-${IMAGE_NAME}.cfg
++
++		# Increment id
++		id=`expr $id + 1`
++	done
++
++	# Create a single rootfs from the left-over rootfs copy
++	mkfs.ubifs -r ${ROOTFS_COPY_DIR} -o ${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubifs ${MKUBIFS_ARGS}
++
++	# Create the ubi from the root file system and data files
++	ubinize -o ${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubi ${UBINIZE_ARGS} ubinize-${IMAGE_NAME}.cfg
++
++	# Create own symlinks for 'named' volumes
++	echo "looking for '${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubifs' in '${IMGDEPLOYDIR}'"
++	cd ${IMGDEPLOYDIR}
++	if [ -e ${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubifs ]; then
++		echo "found"
++		ln -sf ${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubifs ${IMAGE_LINK_NAME}.ubifs
++	fi
++	echo "looking for '${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubi' in '${IMGDEPLOYDIR}'"
++	if [ -e ${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubi ]; then
++		echo "found"
++		ln -sf ${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubi ${IMAGE_LINK_NAME}.ubi
++	fi
++	echo "looking for '${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.data.ubi' in '${IMGDEPLOYDIR}'"
++	if [ -e ${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.data.ubi ]; then
++		echo "found"
++		ln -sf ${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.data.ubi ${IMAGE_LINK_NAME}.ubi
++	fi
++	cd -
++
++	# Cleanup cfg file
++	mv ubinize-${IMAGE_NAME}.cfg ${IMGDEPLOYDIR}/
++
++	if [ "x${UBIVOL_SPARSE}" = "xyes" ]; then
++		# Convert to sparse image
++		cd ${IMGDEPLOYDIR}
++		img2simg ${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubi ${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubi.sparse ${NAND_ERASE_BLOCK_SIZE}
++		rm -f ${IMAGE_LINK_NAME}.ubi.sparse
++		ln -sf ${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubi.sparse ${IMAGE_LINK_NAME}.ubi.sparse
++		cd -
++	fi
++
++	# Clean up created file system copies
++	for f in ${remove_these_file_system_copies}; do
++		echo "Removing file system copy ${f}"
++	# 	rm -rf ${f}
++	done
++}
++
+ EXTRA_IMAGECMD = ""
+ 
+ inherit siteinfo kernel-arch
+@@ -242,6 +482,8 @@ do_image_elf[depends] += "virtual/kernel:do_populate_sysroot mkelfimage-native:d
+ do_image_ubi[depends] += "mtd-utils-native:do_populate_sysroot"
+ do_image_ubifs[depends] += "mtd-utils-native:do_populate_sysroot"
+ do_image_multiubi[depends] += "mtd-utils-native:do_populate_sysroot"
++do_image_ubimultivol[depends] += "mtd-utils-native:do_populate_sysroot"
++do_image_ubimultivol[depends] += "android-tools-native:do_populate_sysroot"
+ 
+ # This variable is available to request which values are suitable for IMAGE_FSTYPES
+ IMAGE_TYPES = " \
+@@ -254,7 +496,7 @@ IMAGE_TYPES = " \
+     iso \
+     hddimg \
+     squashfs squashfs-xz squashfs-lzo squashfs-lz4 \
+-    ubi ubifs multiubi \
++    ubi ubifs multiubi ubimultivol \
+     tar tar.gz tar.bz2 tar.xz tar.lz4 \
+     cpio cpio.gz cpio.xz cpio.lzma cpio.lz4 \
+     elf \

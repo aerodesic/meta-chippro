@@ -11,8 +11,8 @@ COMPATIBLE_MACHINE = "chippro"
 PROVIDES += "u-boot"
 RDEPENDS_${PN}_append_chippro = " image-flasher"
 
-ENV_IMAGE ?= "${UBOOT_ENV_NAME}-${MACHINE}-${PN}-${PV}.bin"
 IMG_NAME ?= "u-boot.img-${MACHINE}-${PN}-${PV}.bin"
+ENV_IMAGE ?= "${UBOOT_ENV_NAME}-${MACHINE}-${PN}-${PV}.bin"
 
 PV = "git${SRCPV}"
 

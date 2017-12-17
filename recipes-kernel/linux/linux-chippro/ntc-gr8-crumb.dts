@@ -168,27 +168,32 @@
 
 		spl@0 {
 			label = "spl";
-			reg = /bits/ 64 <0x00000000 0x00400000>;
+			reg = /bits/ 64 <0x00000000 0x00200000>;
 		};
 
-		spl-backup@400000 {
+		spl-backup@200000 {
 			label = "spl-backup";
-			reg = /bits/ 64 <0x00400000 0x00400000>;
+			reg = /bits/ 64 <0x00200000 0x00200000>;
 		};
 
-		u-boot@800000 {
+		u-boot@400000 {
 			label = "u-boot";
-			reg = /bits/ 64 <0x00800000 0x00400000>;
+			reg = /bits/ 64 <0x00400000 0x00200000>;
 		};
 
-		u-boot-backup@C00000 {
+		u-boot-backup@600000 {
 			label = "u-boot-backup";
-			reg = /bits/ 64 <0x00C00000 0x00400000>;
+			reg = /bits/ 64 <0x00600000 0x00200000>;
 		};
 
-		UBI@1000000 {
+		uboot-env@800000 {
+			label = "u-boot-backup";
+			reg = /bits/ 64 <0x00800000 0x00200000>;
+		};
+
+		UBI@A00000 {
 			label = "UBI";
-			reg = /bits/ 64 <0x01000000 0x1ff000000>;
+			reg = /bits/ 64 <0x00A00000 0x1f6000000>;
 		};
 	};
 };
